@@ -8,6 +8,8 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <signal.h>
 
 int AddBook(int *newsock,char *buffer,int ret)
 {
@@ -588,6 +590,21 @@ int ViewBooks(int *newsock,char *buffer,int ret)
     lock.l_pid = getpid();
     int fd = fileno(books);
     fcntl(fd, F_SETLKW, &lock);
+
+    // checking for lock
+
+    if (fcntl(fd, F_SETLK, &lock) == -1) {
+    if (errno == EACCES || errno == EAGAIN) {
+        printf("File is locked by another process\n");
+        exit(1);
+    }
+
+    if (fcntl(fd, F_SETLKW, &lock) == -1) {
+        perror("fcntl");
+        printf("Error locking file because another process is locking and i can't allow another function to acess it\n");
+     }
+    
+}
     
     char temp[100];
     char temp1[100];
@@ -633,7 +650,6 @@ int ViewBooks(int *newsock,char *buffer,int ret)
 
 int AdminViewBooks(int *newsock,char *buffer,int ret)
 {
-    //print stock of books as well
     FILE *books = fopen("books.txt","r");
     if(books==NULL)
     {
@@ -641,13 +657,30 @@ int AdminViewBooks(int *newsock,char *buffer,int ret)
         exit(EXIT_FAILURE);
     }
     struct flock lock;
-    lock.l_type = F_WRLCK;
+    lock.l_type = F_WRLCK; // Use a write lock to prevent other processes from reading or writing
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
     lock.l_len = 0;
     lock.l_pid = getpid();
     int fd = fileno(books);
-    fcntl(fd, F_SETLKW, &lock);
+    
+    // checking for lock
+
+    if (fcntl(fd, F_SETLK, &lock) == -1) {
+    if (errno == EACCES || errno == EAGAIN) {
+        printf("File is locked by another process\n");
+        exit(1);
+    }
+
+    if (fcntl(fd, F_SETLKW, &lock) == -1) {
+        perror("fcntl");
+        printf("Error locking file because another process is locking and i can't allow another function to acess it\n");
+    }
+    }
+
+    
+    //sleep(999); //to check for lock
+    
 
     char temp[100];
     char temp1[100];
@@ -673,8 +706,14 @@ int AdminViewBooks(int *newsock,char *buffer,int ret)
         fsync(*newsock);
     }
     write_ret = write(*newsock,"End of file",11);
-    lock.l_type = F_UNLCK;
-    fcntl(fd, F_SETLK, &lock);
+     
+
+     lock.l_type = F_UNLCK;
+    if (fcntl(fd, F_SETLK, &lock) == -1) {
+        perror("fcntl");
+        exit(EXIT_FAILURE);
+    }
+
     fclose(books);
     printf("Books viewed\n");
     return 1;
@@ -1413,7 +1452,7 @@ int main()
 
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(8040);
+    server.sin_port = htons(8050);
 
     if (bind(sock, (struct sockaddr *)&server, sizeof(server)) < 0)
     {
