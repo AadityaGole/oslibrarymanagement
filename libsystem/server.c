@@ -692,7 +692,7 @@ int ViewBooks(int *newsock,char *buffer,int ret)
     //printf("File is not locked\n");
     //write(*newsock,"File not locked\n",17);
     printf("sleeping\n");
-    sleep(10); //to check for lock
+    //sleep(999); //to check for lock
     printf("awake\n");
     char temp[100],temp1[100],temp2[100];
     int temp3;
