@@ -161,6 +161,17 @@ int viewallbooks(int sock)
 void memberviewallbooks(int sock)
 {
     char buf[100];
+    char lock[100];
+    printf("before checking for lock\n");
+    read(sock, lock, sizeof(lock));
+    //make lock end with null terminator
+    lock[sizeof(lock)-1] = '\0';
+    printf("%s\n", lock);
+    if(strcmp(lock, "Failed to acquire lock") == 0)
+    {
+        return;
+    }
+    printf("after checking for lock\n");
     int ret;
     //write(sock, "M2", strlen("M2"));
     ret = read(sock, buf, sizeof(buf));

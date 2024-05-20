@@ -3,6 +3,9 @@ This is a server-side application written in C for a book borrowing system. It a
 
 It has file locking,concurency(hanlding multiple clients), password authentication, modyfing users(forgotpassword), and all library functionalities
 
+***THE LOCK ONLY WORKS FOR VIEWBOOKS AND MEMBERVIEWALLBOOKS***
+if you want it to be locked then implement like these functions else where
+
 Functions
 BorrowBook(int *newsock,char *buffer,int ret): This function allows a client to borrow a book. It reads the username and book name from the client, checks if the book is available, and if so, decreases the book's quantity by one and logs the transaction.
 

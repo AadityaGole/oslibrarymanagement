@@ -11,6 +11,9 @@
 #include <errno.h>
 #include <signal.h>
 
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+
 int AddBook(int *newsock,char *buffer,int ret)
 {
     char book_name[100];
@@ -576,59 +579,128 @@ int UpdateMember(int *newsock,char *buffer,int ret)
 
 int ViewBooks(int *newsock,char *buffer,int ret)
 {
-    FILE *books = fopen("books.txt","r");
+    // FILE *books = fopen("books.txt","r");
+    // if(books==NULL)
+    // {
+    //     perror("Error opening file!\n");
+    //     exit(EXIT_FAILURE);
+    // }
+    // struct flock lock;
+    // lock.l_type = F_WRLCK;
+    // lock.l_whence = SEEK_SET;
+    // lock.l_start = 0;
+    // lock.l_len = 0;
+    // lock.l_pid = getpid();
+    // int fd = fileno(books);
+    // fcntl(fd, F_SETLKW, &lock);
+
+    // checking for lock
+
+    // if (fcntl(fd, F_SETLK, &lock) == -1) 
+    // {
+    //     if (errno == EACCES || errno == EAGAIN) 
+    //     {
+
+    //         printf("File is locked by another process\n");
+    //         //exit(1);
+    //     }
+
+    //     if (fcntl(fd, F_SETLKW, &lock) == -1) 
+    //     {
+    //         //perror("fcntl");
+    //         printf("Error locking file because another process is locking and i can't allow another function to acess it\n");
+    //         write(*newsock,"File is locked",14);
+    //         return -1;
+    //     }
+    
+    // }
+//--------------------------------------------------------------------
+    // FILE *books = fopen("books.txt","r+");
+    // if(books==NULL)
+    // {
+    //     perror("Error opening file!\n");
+    //     exit(EXIT_FAILURE);
+    // }
+    // struct flock lock;
+    // lock.l_type = F_WRLCK; // set lock type to write lock
+    // lock.l_whence = SEEK_SET;
+    // lock.l_start = 0;
+    // lock.l_len = 0;
+    // lock.l_pid = getpid();
+    // int fd = fileno(books);
+    // if (fcntl(fd, F_SETLKW, &lock) == -1) // checking for lock
+    // {
+    //     if (errno == EACCES || errno == EAGAIN) 
+    //     {
+    //         printf("File is locked by another process\n");
+    //         write(*newsock,"File is locked",14);
+    //         return -1;
+    //     }
+    // }
+    // printf("File is not locked\n");
+    // write(*newsock,"File not locked\n",17);
+    // printf("sleeping\n");
+    // sleep(999); //to check for lock
+    // printf("awake\n");
+    // char temp[100],temp1[100],temp2[100];
+    // int temp3;
+    // while(fscanf(books,"%s %d",temp1,&temp3)!=EOF)
+    // {
+    //     write(*newsock,temp1,strlen(temp1));
+    //     write(*newsock,"\n",1);
+    // }
+    // ssize_t write_ret;
+    // if(feof(books))
+    // {
+        
+    //     if (write_ret < 0) 
+    //     {
+    //         perror("Error writing to socket");
+    //         exit(1);
+    //     }
+    //     fsync(*newsock);
+    // }
+    // write_ret = write(*newsock,"End of file",11);
+    // lock.l_type = F_UNLCK;
+    // fcntl(fd, F_SETLK, &lock);
+    // fclose(books);
+    // printf("Books viewed\n");
+    // return 1;
+    printf("Inside ViewBooks\n");
+    int lock_status = pthread_mutex_trylock(&lock); // attempt to acquire the lock
+    printf("lock status: %d\n", lock_status);
+    if (lock_status == 0) 
+    {
+        printf("Lock acquired successfully\n");
+        write(*newsock, "Lock acquired successfully", 26);
+    }
+    else 
+    {
+        printf("Failed to acquire lock\n");
+        write(*newsock, "Failed to acquire lock", 23);
+        return -1;
+        // handle error or return from function
+    }
+    
+    printf("lock checked\n");
+    FILE *books = fopen("books.txt","r+");
     if(books==NULL)
     {
         perror("Error opening file!\n");
         exit(EXIT_FAILURE);
     }
-    struct flock lock;
-    lock.l_type = F_WRLCK;
-    lock.l_whence = SEEK_SET;
-    lock.l_start = 0;
-    lock.l_len = 0;
-    lock.l_pid = getpid();
-    int fd = fileno(books);
-    fcntl(fd, F_SETLKW, &lock);
-
-    // checking for lock
-
-    if (fcntl(fd, F_SETLK, &lock) == -1) {
-    if (errno == EACCES || errno == EAGAIN) {
-        printf("File is locked by another process\n");
-        exit(1);
-    }
-
-    if (fcntl(fd, F_SETLKW, &lock) == -1) {
-        perror("fcntl");
-        printf("Error locking file because another process is locking and i can't allow another function to acess it\n");
-     }
-    
-}
-    
-    char temp[100];
-    char temp1[100];
-    char temp2[100];
+    //printf("File is not locked\n");
+    //write(*newsock,"File not locked\n",17);
+    printf("sleeping\n");
+    sleep(10); //to check for lock
+    printf("awake\n");
+    char temp[100],temp1[100],temp2[100];
     int temp3;
-
-    
-    // while(fscanf(books,"%s",temp)!=EOF)
-    // {
-    //     write(*newsock,temp,strlen(temp));
-    // }
-    //if there's a newline between each book print, then it will be easier to read
-    // while(fgets(temp, sizeof(temp), books))
-    // {
-    //     write(*newsock,temp,strlen(temp));
-    // }
-    //don't print the stock of the books and the "-" between the book name and stock
     while(fscanf(books,"%s %d",temp1,&temp3)!=EOF)
     {
         write(*newsock,temp1,strlen(temp1));
         write(*newsock,"\n",1);
     }
-    
-
     ssize_t write_ret;
     if(feof(books))
     {
@@ -641,10 +713,14 @@ int ViewBooks(int *newsock,char *buffer,int ret)
         fsync(*newsock);
     }
     write_ret = write(*newsock,"End of file",11);
-    lock.l_type = F_UNLCK;
-    fcntl(fd, F_SETLK, &lock);
+
+
+
     fclose(books);
     printf("Books viewed\n");
+
+    pthread_mutex_unlock(&lock); // release the lock
+
     return 1;
 }
 
@@ -666,17 +742,18 @@ int AdminViewBooks(int *newsock,char *buffer,int ret)
     
     // checking for lock
 
-    if (fcntl(fd, F_SETLK, &lock) == -1) {
-    if (errno == EACCES || errno == EAGAIN) {
-        printf("File is locked by another process\n");
-        exit(1);
-    }
+    // if (fcntl(fd, F_SETLK, &lock) == -1) {
+    // if (errno == EACCES || errno == EAGAIN) {
+    //     printf("File is locked by another process\n");
+    //     exit(1);
+    // }
 
-    if (fcntl(fd, F_SETLKW, &lock) == -1) {
-        perror("fcntl");
-        printf("Error locking file because another process is locking and i can't allow another function to acess it\n");
-    }
-    }
+    // if (fcntl(fd, F_SETLKW, &lock) == -1) {
+    //     perror("fcntl");
+    //     printf("Error locking file because another process is locking and i can't allow another function to acess it\n");
+    //     return -1;
+    // }
+    // }
 
     
     //sleep(999); //to check for lock
@@ -1301,7 +1378,6 @@ int admin(int *newsock,char *buffer,int ret)
     return 1;
 }
 
-
 void *operator(void *arg)
 {
     int nsd = *(int*)arg;
@@ -1430,7 +1506,6 @@ void *operator(void *arg)
     return NULL;
 }
 
-
 int main()
 {
     struct sockaddr_in server, cli,clientconnection; //serv==server, cli==clientconnection
@@ -1452,7 +1527,7 @@ int main()
 
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(8050);
+    server.sin_port = htons(8040);
 
     if (bind(sock, (struct sockaddr *)&server, sizeof(server)) < 0)
     {
@@ -1481,204 +1556,4 @@ int main()
     close(sock);
     return 0;
 }
-
-
-
-
-
-    //---------------------------------------------------------------------------
-//     socklen_t client_len = sizeof(clientconnection);
-
-//     newsock = accept(sock, (struct sockaddr *)&clientconnection, &client_len);
-//     if (newsock < 0) 
-//     {
-//         perror("Error on accept");
-//         exit(1);
-//     }
-//     // Read the client's message and print it
-//     //char client_message[2000];
-//     // int bytes_read = read(newsock, client_message, sizeof(client_message) - 1);
-
-//     // if (bytes_read < 0) {
-//     //     printf("Failed to read from client\n");
-//     // } else {
-//     //     client_message[bytes_read] = '\0'; // Add null terminator
-//     //     printf("Client message: %s\n", client_message);
-//     // }
-
-//     // Write "connection accepted" to the client
-//     //write(newsock, "Connection accepted", 19);
-//     printf("Bind successful\n");
-
-//         while(1)
-//         {
-            
-//             int len = sizeof(struct sockaddr_in);
-//             int auth=0;
-            
-
-//             if (fork() == 0) 
-//             {
-//                 printf("Inside child process\n");
-//                 //close(sock);
-//                 int newsock = accept(sock, (struct sockaddr *)&clientconnection, &client_len);
-//                 printf("waiting to read\n");
-//                 ret=read(newsock,buffer,1024);
-//                 if(ret<0)
-//                 {
-//                     perror("Error reading from socket\n");
-//                     close(newsock);
-//                     continue;
-
-//                 }
-//                 else if(ret==0)
-//                 {
-//                     printf("Client closed the connection\n");
-//                     close(newsock);
-//                     continue;
-//                 }
-//                 printf("Received read: %d\n",ret);
-//                 printf("%s\n", buffer);
-//                 //buffer[ret]='\0';
-//                 printf("buffer printed\n");
-//                 if (strcmp(buffer, "admin") == 0) 
-//                 {
-//                     // Handle admin command
-//                     printf("Admin command received\n");
-//                     //admin(&newsock, buffer, ret);
-//                     printf("Admin command handled\n");
-//                 }
-
-//                 else if(strcmp(buffer,"register")==0)
-//                 {
-//                     Register(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"login")==0)
-//                 {
-//                     auth = Login(&newsock,buffer,ret,&auth);
-//                 }
-//                 else if(strcmp(buffer,"forgot")==0)
-//                 {
-//                     ForgotPassword(&newsock,buffer,ret);
-//                 }
-//                 else
-//                 {
-//                     printf("Invalid choice\n");
-//                 }
-//                 //clear buffer
-//                 memset(buffer,0,sizeof(buffer));
-//                 //close(newsock);
-//             }
-//             printf("User authenticated\n");
-//             while(1)
-//             {
-//                 memset(buffer,0,sizeof(buffer));
-//                 ret=read(newsock,buffer,sizeof(buffer)-1);
-//                 if(ret<0)
-//                 {
-//                     perror("Error reading from socket\n");
-//                     close(newsock);
-//                     continue;
-//                 }
-//                 buffer[ret]='\0';
-//                 printf("User chose %s\n",buffer);
-//                 if(strcmp(buffer,"admin")==0)
-//                 {
-//                     admin(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"login")==0)
-//                 {
-//                     Login(&newsock,buffer,ret,&auth);
-//                 }
-//                 else if(strcmp(buffer,"register")==0)
-//                 {
-//                     Register(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"forgot")==0)
-//                 {
-//                     ForgotPassword(&newsock,buffer,ret);
-//                 }
-                
-//                 else if(strcmp(buffer,"A1")==0)
-//                 {
-//                     printf("Inside A1\n");
-//                     AddBook(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"A2")==0)
-//                 {
-//                     SearchBook(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"A3")==0)
-//                 {
-//                     DeleteBook(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"A4")==0)
-//                 {
-//                     UpdateStock(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"A5")==0)
-//                 {
-//                     ViewBooks(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"A6")==0)
-//                 {
-//                     AddMember(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"A7")==0)
-//                 {
-//                     DeleteMember(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"A8")==0)
-//                 {
-//                     ViewMembers(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"A0")==0)
-//                 {
-//                     close(newsock);
-//                 }
-//                 else if(strcmp(buffer,"M1")==0)
-//                 {
-//                     SearchBook(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"M2")==0)
-//                 {
-//                     ViewBooks(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"M3")==0)
-//                 {
-//                     BorrowBook(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"M4")==0)
-//                 {
-//                     ReturnBook(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"M5")==0)
-//                 {
-//                     ForgotPassword(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"M0")==0)
-//                 {
-//                     close(newsock);
-//                     exit(0);
-//                 }
-//                 else if(strcmp(buffer,"forgot")==0)
-//                 {
-//                     ForgotPassword(&newsock,buffer,ret);
-//                 }
-//                 else if(strcmp(buffer,"M0")==0)
-//                 {
-//                     close(newsock);
-//                 }
-//                 else
-//                 {
-//                     printf("wrong numbers\n");
-//                 }
-//             }
-//         }
-//     close(newsock);
-//     close(sock);
-//     return 0;
-// }
-    
-
 
