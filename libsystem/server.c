@@ -157,14 +157,14 @@ int DeleteBook(int *newsock,char *buffer,int ret)
     char temp2[100];
     int temp3;
     int found=0;
-    while(fscanf(books,"%s %s %d",temp1,temp2,&temp3)!=EOF)
+    while(fscanf(books,"%s %s",temp1,temp2)!=EOF)
     {
         if(strcmp(temp1,book_name)==0)
         {
             found=1;
             continue;
         }
-        fprintf(temp,"%s %s %d\n",temp1,temp2,temp3);
+        fprintf(temp,"%s %s\n",temp1,temp2);
     }
     lock1.l_type = F_UNLCK;
     fcntl(fd1, F_SETLK, &lock1);
@@ -689,11 +689,11 @@ int ViewBooks(int *newsock,char *buffer,int ret)
         perror("Error opening file!\n");
         exit(EXIT_FAILURE);
     }
-    //printf("File is not locked\n");
-    //write(*newsock,"File not locked\n",17);
-    printf("sleeping\n");
-    //sleep(999); //to check for lock
-    printf("awake\n");
+    //uncomment for checking lock
+    // printf("sleeping\n");
+    // sleep(999); //to check for lock
+    // printf("awake\n");
+
     char temp[100],temp1[100],temp2[100];
     int temp3;
     while(fscanf(books,"%s %d",temp1,&temp3)!=EOF)

@@ -360,6 +360,8 @@ int adminviewallbooks(int sock)
             exit(EXIT_FAILURE);
             return 0;
         }
+        //buf[ret] = '\0';
+
         write(1, buf, ret);
     }
     if (ret < 0) 
